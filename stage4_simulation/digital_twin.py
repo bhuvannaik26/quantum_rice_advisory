@@ -94,7 +94,6 @@ STAGE_VULNERABILITY = {
     "Maturity":           0.30,
 }
 
-# Human-readable intervention labels for farmers
 INTERVENTION_LABELS = {
     "fungicide":    "Spray Fungicide",
     "bactericide":  "Spray Bactericide",
@@ -105,155 +104,162 @@ INTERVENTION_LABELS = {
     "no_action":    "No Treatment Needed",
 }
 
-# What to buy / how to apply (farmer instructions)
 INTERVENTION_INSTRUCTIONS = {
     "fungicide": {
-        "product":   "Tricyclazole 75% WP  or  Propiconazole 25% EC",
-        "dose":      "1g per litre of water (Tricyclazole)  /  1ml per litre (Propiconazole)",
-        "method":    "Spray evenly on leaves in the early morning or evening",
-        "when":      "Apply immediately — do not delay beyond 2 days",
+        "product": "Tricyclazole 75% WP  or  Propiconazole 25% EC",
+        "dose":    "1g per litre of water (Tricyclazole) / "
+                   "1ml per litre (Propiconazole)",
+        "method":  "Spray evenly on leaves in early morning or evening",
+        "when":    "Apply immediately — do not delay beyond 2 days",
     },
     "bactericide": {
-        "product":   "Copper Oxychloride 50% WP",
-        "dose":      "3g per litre of water",
-        "method":    "Spray on lower leaves and stems",
-        "when":      "Apply within 1–2 days; drain excess water first",
+        "product": "Copper Oxychloride 50% WP",
+        "dose":    "3g per litre of water",
+        "method":  "Spray on lower leaves and stems",
+        "when":    "Apply within 1–2 days; drain excess water first",
     },
     "pesticide": {
-        "product":   "Chlorpyrifos 20% EC  or  Cartap Hydrochloride 50% SP",
-        "dose":      "2ml per litre (Chlorpyrifos)  /  1g per litre (Cartap)",
-        "method":    "Spray on affected tillers; target leaf-feeding insects",
-        "when":      "Apply in the evening to protect pollinators",
+        "product": "Chlorpyrifos 20% EC  or  Cartap Hydrochloride 50% SP",
+        "dose":    "2ml per litre (Chlorpyrifos) / "
+                   "1g per litre (Cartap)",
+        "method":  "Spray on affected tillers; target leaf-feeding insects",
+        "when":    "Apply in the evening to protect pollinators",
     },
     "fertilizer_N": {
-        "product":   "Urea (46% Nitrogen)",
-        "dose":      "25–30 kg per acre as top dressing",
-        "method":    "Broadcast evenly in standing water; keep field flooded 3 days",
-        "when":      "Apply within this week for best uptake",
+        "product": "Urea (46% Nitrogen)",
+        "dose":    "25–30 kg per acre as top dressing",
+        "method":  "Broadcast evenly in standing water; "
+                   "keep field flooded 3 days",
+        "when":    "Apply within this week for best uptake",
     },
     "irrigation": {
-        "product":   "Water — maintain 5cm standing water",
-        "dose":      "Flood to 5cm depth",
-        "method":    "Ensure uniform water coverage across the field",
-        "when":      "Start today; monitor daily",
+        "product": "Water — maintain 5cm standing water",
+        "dose":    "Flood to 5cm depth",
+        "method":  "Ensure uniform water coverage across the field",
+        "when":    "Start today; monitor daily",
     },
     "drainage": {
-        "product":   "Open drainage channels",
-        "dose":      "Drain fully for 2–3 days",
-        "method":    "Open outlet channels; allow field to dry partially",
-        "when":      "Begin today — waterlogging worsens bacterial spread",
+        "product": "Open drainage channels",
+        "dose":    "Drain fully for 2–3 days",
+        "method":  "Open outlet channels; allow field to dry partially",
+        "when":    "Begin today — waterlogging worsens bacterial spread",
     },
     "no_action": {
-        "product":   "No treatment required",
-        "dose":      "—",
-        "method":    "Continue regular monitoring every 3–4 days",
-        "when":      "Monitor and re-assess if symptoms appear",
+        "product": "No treatment required",
+        "dose":    "—",
+        "method":  "Continue regular monitoring every 3–4 days",
+        "when":    "Monitor and re-assess if symptoms appear",
     },
 }
 
-# Urgency based on severity
 URGENCY_LABELS = {
-    0: {"label": "Act This Week",  "days": 7,  "color": "green"},
+    0: {"label": "Act This Week",     "days": 7, "color": "green"},
     1: {"label": "Act Within 3 Days", "days": 3, "color": "orange"},
-    2: {"label": "Act Today",      "days": 1,  "color": "red"},
+    2: {"label": "Act Today",         "days": 1, "color": "red"},
 }
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SIMULATION A — PennyLane Farm Health Score
 # ══════════════════════════════════════════════════════════════════════════════
-#
-# 5 qubits → 5 farm health dimensions:
-#   q[0] → Disease Health    (how badly is disease hurting the crop?)
-#   q[1] → Environmental Health (weather + climate stress)
-#   q[2] → Soil Health       (pH, nitrogen, organic carbon)
-#   q[3] → Intervention Readiness (how well will treatment work?)
-#   q[4] → Recovery Potential (can the crop bounce back?)
-#
-# ⟨Z⟩ = +1 → perfectly healthy dimension
-# ⟨Z⟩ = -1 → critically stressed dimension
-# Score = (⟨Z⟩ + 1) / 2 × 100  →  0 to 100 per dimension
 
 _n_health_qubits = 5
 _dev_health = qml.device("default.qubit", wires=_n_health_qubits)
 
 
 @qml.qnode(_dev_health, interface="numpy")
-def _farm_health_circuit(health_inputs: np.ndarray, weights: np.ndarray):
+def _farm_health_circuit(health_inputs: np.ndarray,
+                         weights: np.ndarray):
     """
     5-qubit circuit encoding farm health dimensions.
-    AngleEmbedding maps each dimension's stress → qubit rotation.
-    Entanglement layers model how dimensions affect each other
-    (e.g. bad soil worsens disease impact).
+    Qubit mapping:
+      q[0] → Disease Health
+      q[1] → Environmental Health
+      q[2] → Soil Health
+      q[3] → Treatment Effectiveness
+      q[4] → Recovery Potential
     """
-    # Encode: high stress = large rotation = more |1⟩ = lower ⟨Z⟩
-    qml.AngleEmbedding(health_inputs * np.pi, wires=range(_n_health_qubits), rotation='Y')
+    qml.AngleEmbedding(
+        health_inputs * np.pi,
+        wires=range(_n_health_qubits),
+        rotation='Y'
+    )
 
-    # Layer 1: cross-dimension entanglement
-    qml.CNOT(wires=[0, 1])   # disease affects environment response
+    # Layer 1 — cross-dimension entanglement
+    qml.CNOT(wires=[0, 1])
     qml.RZ(weights[0], wires=1)
     qml.CNOT(wires=[0, 1])
 
-    qml.CNOT(wires=[2, 0])   # soil health affects disease severity
+    qml.CNOT(wires=[2, 0])
     qml.RZ(weights[1], wires=0)
     qml.CNOT(wires=[2, 0])
 
-    qml.CNOT(wires=[1, 3])   # env stress affects intervention readiness
+    qml.CNOT(wires=[1, 3])
     qml.RZ(weights[2], wires=3)
     qml.CNOT(wires=[1, 3])
 
-    qml.CNOT(wires=[3, 4])   # intervention readiness affects recovery
+    qml.CNOT(wires=[3, 4])
     qml.RZ(weights[3], wires=4)
     qml.CNOT(wires=[3, 4])
 
-    qml.CNOT(wires=[0, 4])   # disease severity affects recovery potential
+    qml.CNOT(wires=[0, 4])
     qml.RZ(weights[4], wires=4)
     qml.CNOT(wires=[0, 4])
 
-    # Layer 2: mixer
+    # Layer 2 — mixer
     for i in range(_n_health_qubits):
         qml.RX(weights[5 + i], wires=i)
 
-    return [qml.expval(qml.PauliZ(i)) for i in range(_n_health_qubits)]
+    return [qml.expval(qml.PauliZ(i))
+            for i in range(_n_health_qubits)]
 
 
 _HEALTH_WEIGHTS = np.array([
-    0.55, 0.42, 0.61, 0.38, 0.49,   # RZ weights
-    0.31, 0.47, 0.52, 0.44, 0.36,   # RX mixer weights
+    0.55, 0.42, 0.61, 0.38, 0.49,
+    0.31, 0.47, 0.52, 0.44, 0.36,
 ], dtype=float)
 
 
-def _compute_health_inputs(disease_pen: float, env_pen: float,
-                           soil: dict, severity_idx: int,
-                           recovery_map: dict) -> np.ndarray:
+def _compute_health_inputs(disease_pen:   float,
+                           env_pen:       float,
+                           soil:          dict,
+                           severity_idx:  int,
+                           recovery_map:  dict,
+                           weather:       dict) -> np.ndarray:
     """
-    Convert farm agronomic context into 5 health stress values [0, 1].
+    Convert farm agronomic context into 5 health stress values [0,1].
     0 = perfectly healthy, 1 = critically stressed.
+    Temperature correctly sourced from weather, not soil.
     """
     # q[0] Disease stress
     disease_stress = np.clip(disease_pen, 0.0, 1.0)
 
-    # q[1] Environmental stress (temperature, humidity)
-    temp = soil.get("temperature", 25.0) if isinstance(soil, dict) else 25.0
-    temp_stress = np.clip((temp - 25.0) / 15.0, 0.0, 1.0)  # stress above 25°C
-    env_stress  = np.clip((env_pen * 0.6 + temp_stress * 0.4), 0.0, 1.0)
+    # q[1] Environmental stress — temperature + humidity from weather
+    temp        = weather.get("temperature", 25.0)
+    humidity    = weather.get("humidity",    70.0)
+    temp_stress = np.clip((temp - 25.0) / 15.0, 0.0, 1.0)
+    hum_stress  = np.clip((humidity - 70.0) / 30.0, 0.0, 1.0)
+    env_stress  = np.clip(
+        env_pen * 0.5 + temp_stress * 0.3 + hum_stress * 0.2,
+        0.0, 1.0
+    )
 
-    # q[2] Soil health stress (bad pH and low nitrogen = high stress)
-    ph  = soil.get("ph", 6.5)
-    nit = soil.get("nitrogen_g_kg", 1.5)
-    ph_stress  = np.clip(abs(ph - 6.5) / 2.0, 0.0, 1.0)
-    nit_stress = np.clip(1.0 - nit / 2.5, 0.0, 1.0)
-    soil_stress = (ph_stress * 0.5 + nit_stress * 0.5)
+    # q[2] Soil health stress — pH + nitrogen from soil API
+    ph          = soil.get("ph",             6.5)
+    nit         = soil.get("nitrogen_g_kg",  1.5)
+    ph_stress   = np.clip(abs(ph - 6.5) / 2.0, 0.0, 1.0)
+    nit_stress  = np.clip(1.0 - nit / 2.5,    0.0, 1.0)
+    soil_stress = ph_stress * 0.5 + nit_stress * 0.5
 
-    # q[3] Intervention readiness (high = treatment will work well)
-    # Inverted: low stress = intervention works well
+    # q[3] Intervention readiness stress
     best_recovery = max(recovery_map.values()) if recovery_map else 0.0
     interv_stress = np.clip(1.0 - best_recovery, 0.0, 1.0)
 
-    # q[4] Recovery potential
-    # Lower disease + better soil = higher recovery potential
+    # q[4] Recovery potential stress
     recovery_stress = np.clip(
-        disease_pen * 0.5 + soil_stress * 0.3 + (severity_idx / 2.0) * 0.2,
+        disease_pen * 0.5 +
+        soil_stress * 0.3 +
+        (severity_idx / 2.0) * 0.2,
         0.0, 1.0
     )
 
@@ -270,23 +276,24 @@ def run_pennylane_health(disease_label: str,
                          disease_pen:   float,
                          env_pen:       float,
                          severity_idx:  int,
-                         soil:          dict) -> dict:
+                         soil:          dict,
+                         weather:       dict) -> dict:
     """
     Run 5-qubit PennyLane health circuit.
-    Returns a farmer-friendly Farm Health Score with colour and 5 dimension bars.
+    Returns farmer-friendly Farm Health Score with 5 dimension bars.
     """
     recovery_map = INTERVENTION_RECOVERY.get(
         disease_label, INTERVENTION_RECOVERY["Healthy"]
     )
 
     health_inputs = _compute_health_inputs(
-        disease_pen, env_pen, soil, severity_idx, recovery_map
+        disease_pen, env_pen, soil,
+        severity_idx, recovery_map, weather
     )
 
     expectations = _farm_health_circuit(health_inputs, _HEALTH_WEIGHTS)
 
-    # Convert ⟨Z⟩ ∈ [-1, +1] → health score ∈ [0, 100]
-    # +1 = healthy (score 100), -1 = critical (score 0)
+    # ⟨Z⟩ ∈ [-1,+1] → score ∈ [0,100]
     dimension_scores = [
         round((float(e) + 1.0) / 2.0 * 100, 1)
         for e in expectations
@@ -300,23 +307,26 @@ def run_pennylane_health(disease_label: str,
         "Recovery Potential",
     ]
 
-    # Weighted overall score
     weights = [0.35, 0.20, 0.20, 0.15, 0.10]
-    overall = round(sum(s * w for s, w in zip(dimension_scores, weights)), 1)
+    overall = round(
+        sum(s * w for s, w in zip(dimension_scores, weights)), 1
+    )
 
-    # Colour band
     if overall >= 70:
         color  = "green"
         label  = "Healthy"
-        advice = "Your crop is in good condition. Continue regular monitoring."
+        advice = ("Your crop is in good condition. "
+                  "Continue regular monitoring.")
     elif overall >= 45:
         color  = "orange"
         label  = "Moderate Stress"
-        advice = "Your crop shows stress. Act soon to prevent yield loss."
+        advice = ("Your crop shows stress. "
+                  "Act soon to prevent yield loss.")
     else:
         color  = "red"
         label  = "Critical"
-        advice = "Your crop is under severe stress. Immediate action required."
+        advice = ("Your crop is under severe stress. "
+                  "Immediate action required.")
 
     dimensions = [
         {
@@ -332,11 +342,11 @@ def run_pennylane_health(disease_label: str,
     ]
 
     return {
-        "overall_score":  overall,
-        "color":          color,
-        "label":          label,
-        "advice":         advice,
-        "dimensions":     dimensions,
+        "overall_score":    overall,
+        "color":            color,
+        "label":            label,
+        "advice":           advice,
+        "dimensions":       dimensions,
         "raw_expectations": [round(float(e), 4) for e in expectations],
     }
 
@@ -357,7 +367,8 @@ QISKIT_INTERVENTION_MAP = {
 }
 
 
-def _build_grover_oracle(target_indices: list, n_qubits: int = 3) -> QuantumCircuit:
+def _build_grover_oracle(target_indices: list,
+                         n_qubits: int = 3) -> QuantumCircuit:
     oracle = QuantumCircuit(n_qubits, name="Oracle")
     for idx in target_indices:
         bits = format(idx, f'0{n_qubits}b')
@@ -392,19 +403,14 @@ def _build_grover_diffuser(n_qubits: int) -> QuantumCircuit:
 
 
 def _select_target_interventions(disease_label: str,
-                                 severity_idx:   int,
-                                 overall_risk:   float) -> list:
-    targets = [0]
+                                  severity_idx:   int,
+                                  overall_risk:   float) -> list:
     d = disease_label
     if d in ("Rice Blast", "Sheath Blight", "Brown Spot",
              "Narrow Brown Leaf Spot", "Leaf Scald"):
-        targets = [1]
-        if severity_idx >= 1:
-            targets = [7]
+        targets = [7] if severity_idx >= 1 else [1]
     elif d == "Bacterial Leaf Blight":
-        targets = [2]
-        if overall_risk > 0.5:
-            targets = [2, 6]
+        targets = [2, 6] if overall_risk > 0.5 else [2]
     elif d in ("Rice Hispa", "Rice Leaffolder",
                "Rice Tungro", "Rice Stripes"):
         targets = [3]
@@ -416,16 +422,13 @@ def _select_target_interventions(disease_label: str,
 
 
 def run_qiskit_recommendation(disease_label: str,
-                              severity_idx:   int,
-                              risk:           dict,
-                              yield_pred:     dict) -> dict:
+                               severity_idx:  int,
+                               risk:          dict,
+                               yield_pred:    dict) -> dict:
     """
     Grover search over 8 interventions.
-    Returns ONE clear winner with:
-      - Confidence % (amplified probability vs random baseline)
-      - Farmer-friendly action label
-      - What to buy, dose, method, urgency
-      - Expected yield recovery
+    Returns one clear winner with confidence %, farmer instructions,
+    yield recovery estimate and economic impact.
     """
     n_qubits     = 3
     n_states     = 2 ** n_qubits
@@ -439,7 +442,7 @@ def run_qiskit_recommendation(disease_label: str,
     k      = len(target_indices)
     n_iter = max(1, round((np.pi / 4) * np.sqrt(n_states / k)))
 
-    # Build and run Grover circuit
+    # Build Grover circuit
     qc = QuantumCircuit(n_qubits, n_qubits)
     qc.h(range(n_qubits))
     oracle   = _build_grover_oracle(target_indices, n_qubits)
@@ -462,37 +465,35 @@ def run_qiskit_recommendation(disease_label: str,
     amplitudes = np.abs(Statevector(sv_qc).data) ** 2
 
     # Pick winner
-    sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
-    top_state     = sorted_counts[0][0] if sorted_counts else "000"
-    top_idx       = int(top_state, 2)
-    top_interv    = QISKIT_INTERVENTION_MAP.get(top_idx, "no_action")
-    base_interv   = top_interv.split("+")[0]
+    sorted_counts = sorted(
+        counts.items(), key=lambda x: x[1], reverse=True
+    )
+    top_state   = sorted_counts[0][0] if sorted_counts else "000"
+    top_idx     = int(top_state, 2)
+    top_interv  = QISKIT_INTERVENTION_MAP.get(top_idx, "no_action")
+    base_interv = top_interv.split("+")[0]
 
-    # Confidence: shots share of winning state (clear farmer-readable %)
     total_shots    = sum(counts.values())
     winner_shots   = counts.get(top_state, 0)
     confidence_pct = round((winner_shots / total_shots) * 100, 1)
 
     # Yield recovery estimate
-    recovery_map     = INTERVENTION_RECOVERY.get(
+    recovery_map  = INTERVENTION_RECOVERY.get(
         disease_label, INTERVENTION_RECOVERY["Healthy"]
     )
-    base_recovery    = recovery_map.get(base_interv, 0.0)
-    yield_loss       = yield_pred.get("yield_loss_t_ha", 0.0)
-    recovered_t      = round(yield_loss * base_recovery, 3)
-    cost_inr         = INTERVENTION_COSTS.get(base_interv, 0)
-    revenue_gain     = round(recovered_t * MSP_PER_TONNE_INR)
-    net_benefit      = revenue_gain - cost_inr
+    base_recovery = recovery_map.get(base_interv, 0.0)
+    yield_loss    = yield_pred.get("yield_loss_t_ha", 0.0)
+    recovered_t   = round(yield_loss * base_recovery, 3)
+    cost_inr      = INTERVENTION_COSTS.get(base_interv, 0)
+    revenue_gain  = round(recovered_t * MSP_PER_TONNE_INR)
+    net_benefit   = revenue_gain - cost_inr
 
-    # Urgency
-    urgency = URGENCY_LABELS.get(severity_idx, URGENCY_LABELS[0])
-
-    # Instructions
+    urgency      = URGENCY_LABELS.get(severity_idx, URGENCY_LABELS[0])
     instructions = INTERVENTION_INSTRUCTIONS.get(
         base_interv, INTERVENTION_INSTRUCTIONS["no_action"]
     )
 
-    # All options ranked by shot count (for reference bar chart)
+    # All options ranked
     all_options = []
     for i in range(n_states):
         interv_name = QISKIT_INTERVENTION_MAP.get(i, "unknown")
@@ -500,37 +501,37 @@ def run_qiskit_recommendation(disease_label: str,
         shot_count  = counts.get(format(i, f'0{n_qubits}b'), 0)
         conf        = round((shot_count / total_shots) * 100, 1)
         all_options.append({
-            "intervention":    interv_name,
-            "label":           INTERVENTION_LABELS.get(base_name, interv_name),
-            "confidence_pct":  conf,
-            "shots":           shot_count,
+            "intervention":   interv_name,
+            "label":          INTERVENTION_LABELS.get(
+                                  base_name, interv_name),
+            "confidence_pct": conf,
+            "shots":          shot_count,
         })
     all_options.sort(key=lambda x: x["confidence_pct"], reverse=True)
 
     return {
-        # ── Winner (what the farmer sees) ──────────────────────
         "winner": {
-            "intervention":    base_interv,
-            "label":           INTERVENTION_LABELS.get(base_interv, base_interv),
-            "confidence_pct":  confidence_pct,
-            "urgency_label":   urgency["label"],
-            "urgency_days":    urgency["days"],
-            "urgency_color":   urgency["color"],
+            "intervention":         base_interv,
+            "label":                INTERVENTION_LABELS.get(
+                                        base_interv, base_interv),
+            "confidence_pct":       confidence_pct,
+            "urgency_label":        urgency["label"],
+            "urgency_days":         urgency["days"],
+            "urgency_color":        urgency["color"],
             "recovered_yield_t_ha": recovered_t,
-            "cost_inr":        cost_inr,
-            "revenue_gain_inr": revenue_gain,
-            "net_benefit_inr": net_benefit,
-            "instructions":    instructions,
+            "cost_inr":             cost_inr,
+            "revenue_gain_inr":     revenue_gain,
+            "net_benefit_inr":      net_benefit,
+            "instructions":         instructions,
         },
-        # ── All options for bar chart ──────────────────────────
-        "all_options":    all_options,
+        "all_options":       all_options,
         "grover_iterations": n_iter,
-        "shots":          total_shots,
+        "shots":             total_shots,
     }
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SIMULATION C — Digital Twin Farm State Machine (unchanged)
+# SIMULATION C — Digital Twin Farm State Machine
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _stage_yield_fraction(stage, disease_pen, env_pen,
@@ -585,8 +586,8 @@ def run_digital_twin(stage1, risk, yield_pred, weather, soil):
             }
         row["env_state"] = {
             "temperature":  weather.get("temperature", 25.0),
-            "humidity":     weather.get("humidity", 70.0),
-            "soil_ph":      soil.get("ph", 6.0),
+            "humidity":     weather.get("humidity",    70.0),
+            "soil_ph":      soil.get("ph",             6.0),
             "disease_risk": round(
                 disease_pen * STAGE_VULNERABILITY[stage], 3
             ),
@@ -612,19 +613,21 @@ def run_digital_twin(stage1, risk, yield_pred, weather, soil):
     imm_tr = _final("immediate_intervention")
     del_tr = _final("delayed_intervention")
 
-    cost_inr      = INTERVENTION_COSTS.get(best_interv, 0)
-    yield_gain    = round(
+    cost_inr    = INTERVENTION_COSTS.get(best_interv, 0)
+    yield_gain  = round(
         imm_tr["final_yield_t_ha"] - no_tr["final_yield_t_ha"], 3
     )
-    rev_gain      = round(yield_gain * MSP_PER_TONNE_INR)
-    net_benefit   = rev_gain - cost_inr
-    roi_pct       = (round((net_benefit / cost_inr) * 100, 1)
-                     if cost_inr > 0 else 0.0)
+    rev_gain    = round(yield_gain * MSP_PER_TONNE_INR)
+    net_benefit = rev_gain - cost_inr
+    roi_pct     = (round((net_benefit / cost_inr) * 100, 1)
+                   if cost_inr > 0 else 0.0)
 
-    health_score  = round(
-        (1.0 - disease_pen * 0.5 - env_pen * 0.3 - overall_risk * 0.2) * 100, 1
+    health_score = round(
+        (1.0 - disease_pen * 0.5
+             - env_pen * 0.3
+             - overall_risk * 0.2) * 100, 1
     )
-    health_score  = max(0.0, min(100.0, health_score))
+    health_score = max(0.0, min(100.0, health_score))
 
     def _hl(s):
         if s >= 80: return "Healthy"
@@ -696,7 +699,8 @@ def run_stage4(stage1, risk, yield_pred, weather, soil):
     # ── A: PennyLane Farm Health Score ───────────────────────
     try:
         health_result = run_pennylane_health(
-            disease_label, disease_pen, env_pen, severity_idx, soil
+            disease_label, disease_pen, env_pen,
+            severity_idx, soil, weather          # weather passed correctly
         )
     except Exception as e:
         health_result = {
@@ -737,7 +741,7 @@ def run_stage4(stage1, risk, yield_pred, weather, soil):
         }
         errors["digital_twin"] = str(e)
 
-    # ── Build frontend-ready scenario cards ───────────────────
+    # ── Build frontend scenario cards ─────────────────────────
     tracks      = twin_result.get("tracks", {})
     no_tr       = tracks.get("no_intervention",        {})
     imm_tr      = tracks.get("immediate_intervention", {})
@@ -756,38 +760,44 @@ def run_stage4(stage1, risk, yield_pred, weather, soil):
         {
             "label":   "A",
             "name":    "No Treatment",
-            "description": "Disease progresses unchecked across all growth stages.",
+            "description": (
+                "Disease progresses unchecked "
+                "across all growth stages."
+            ),
             "predicted_yield_t_ha":        no_yield,
             "vitality_pct":                _vit(no_yield),
             "expected_revenue_inr":        no_tr.get("expected_revenue", 0),
             "treatment_cost_inr":          0,
             "economic_loss_inr":           no_tr.get("revenue_loss", 0),
             "yield_gain_vs_no_treat_t_ha": 0.0,
-            "pennylane_energy":            0.0,
         },
         {
             "label":   "B",
-            "name":    f"Delayed ({INTERVENTION_LABELS.get(best_interv, best_interv)})",
-            "description": "Treatment applied 7 days late — partial efficacy.",
+            "name":    (f"Delayed "
+                        f"({INTERVENTION_LABELS.get(best_interv, best_interv)})"),
+            "description": (
+                "Treatment applied 7 days late — partial efficacy."
+            ),
             "predicted_yield_t_ha":        del_yield,
             "vitality_pct":                _vit(del_yield),
             "expected_revenue_inr":        del_tr.get("expected_revenue", 0),
             "treatment_cost_inr":          cb.get("cost_inr", 0),
             "economic_loss_inr":           del_tr.get("revenue_loss", 0),
             "yield_gain_vs_no_treat_t_ha": round(del_yield - no_yield, 3),
-            "pennylane_energy":            0.0,
         },
         {
             "label":   "C",
-            "name":    f"Optimal ({INTERVENTION_LABELS.get(best_interv, best_interv)})",
-            "description": "Immediate treatment — maximum yield recovery.",
+            "name":    (f"Optimal "
+                        f"({INTERVENTION_LABELS.get(best_interv, best_interv)})"),
+            "description": (
+                "Immediate treatment — maximum yield recovery."
+            ),
             "predicted_yield_t_ha":        imm_yield,
             "vitality_pct":                _vit(imm_yield),
             "expected_revenue_inr":        imm_tr.get("expected_revenue", 0),
             "treatment_cost_inr":          cb.get("cost_inr", 0),
             "economic_loss_inr":           imm_tr.get("revenue_loss", 0),
             "yield_gain_vs_no_treat_t_ha": cb.get("yield_gain_t_ha", 0.0),
-            "pennylane_energy":            0.0,
         },
     ]
 
@@ -824,23 +834,25 @@ def run_stage4(stage1, risk, yield_pred, weather, soil):
         "stage":  4,
         "errors": errors,
 
-        # ── PennyLane: Farm Health Score ──────────────────────
+        # PennyLane Farm Health Score
         "farm_health": health_result,
 
-        # ── Qiskit: Single best recommendation ────────────────
+        # Qiskit single best recommendation
         "recommendation": qiskit_result,
 
-        # ── Digital Twin scenario cards (for existing UI) ─────
-        "scenarios":          scenarios,
+        # Digital Twin scenario cards
+        "scenarios":           scenarios,
         "best_scenario_label": "C",
-        "trajectory":         trajectory,
-        "days_simulated":     30,
-        "twin_summary":       twin_summary,
-        "intervention_roi":   roi,
+        "trajectory":          trajectory,
+        "days_simulated":      30,
+        "twin_summary":        twin_summary,
+        "intervention_roi":    roi,
 
-        # Legacy fields (kept for backward compat)
-        "qiskit_fidelity":    round(
-            min(1.0, winner.get("confidence_pct", 0) / 100.0 / 0.125), 4
+        # Legacy fields
+        "qiskit_fidelity": round(
+            min(1.0,
+                winner.get("confidence_pct", 0) / 100.0 / 0.125),
+            4
         ),
         "pennylane_energies": {
             "A": round(health_result.get("overall_score", 50) / 100, 4),
