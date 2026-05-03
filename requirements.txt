@@ -1,0 +1,9 @@
+flask
+pennylane
+pennylane-lightning
+requests
+python-dotenv
+torch
+torchvision
+gunicorn
+Pillow

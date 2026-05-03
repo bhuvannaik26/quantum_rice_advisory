@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Rice Disease Advisory System</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f0f4f0;
+         color: #1a2e1a; min-height: 100vh; }
+  header { background: #1a4a2e; color: white; padding: 1.2rem 2rem;
+           display: flex; align-items: center; gap: 1rem; }
+  header h1 { font-size: 1.3rem; font-weight: 600; }
+  header span { font-size: 0.85rem; opacity: 0.75; }
+  .container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+  .card { background: white; border-radius: 12px;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+          padding: 1.5rem; margin-bottom: 1.5rem; }
+  .card h2 { font-size: 1rem; font-weight: 600; color: #1a4a2e;
+             margin-bottom: 1rem; padding-bottom: 0.5rem;
+             border-bottom: 2px solid #e8f4e8; }
+  .location-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; }
+  input[type=text] { flex: 1; padding: 0.6rem 0.9rem;
+                     border: 1.5px solid #cde0cd; border-radius: 8px;
+                     font-size: 0.9rem; outline: none; }
+  input[type=text]:focus { border-color: #1a4a2e; }
+  .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 8px;
+         cursor: pointer; font-size: 0.85rem; font-weight: 500;
+         transition: all 0.2s; }
+  .btn-primary { background: #1a4a2e; color: white; }
+  .btn-primary:hover { background: #256040; }
+  .btn-secondary { background: #e8f4e8; color: #1a4a2e; }
+  .btn-secondary:hover { background: #d0ebd0; }
+  .location-display { font-size: 0.85rem; color: #256040;
+                      padding: 0.4rem 0; min-height: 1.4rem; }
+  .upload-area { border: 2px dashed #cde0cd; border-radius: 10px;
+                 padding: 2rem; text-align: center; cursor: pointer;
+                 transition: all 0.2s; }
+  .upload-area:hover { border-color: #1a4a2e; background: #f5fbf5; }
+  .upload-area p { color: #666; font-size: 0.9rem; margin-top: 0.5rem; }
+  #preview { max-width: 100%; max-height: 220px; border-radius: 8px;
+             margin-top: 0.75rem; display: none; }
+  .submit-btn { width: 100%; padding: 0.9rem; background: #1a4a2e;
+                color: white; border: none; border-radius: 10px;
+                font-size: 1rem; font-weight: 600; cursor: pointer;
+                transition: background 0.2s; }
+  .submit-btn:hover { background: #256040; }
+  .submit-btn:disabled { background: #aaa; cursor: not-allowed; }
+  #results { display: none; }
+  .results-grid { display: grid;
+                  grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+                  gap: 1rem; margin-bottom: 1rem; }
+  .metric-card { background: #f5fbf5; border-radius: 10px;
+                 padding: 1rem; text-align: center; }
+  .metric-card .label { font-size: 0.75rem; color: #666;
+                        text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-card .value { font-size: 1.5rem; font-weight: 700;
+                        color: #1a4a2e; margin: 0.25rem 0; }
+  .metric-card .sub { font-size: 0.8rem; color: #888; }
+  .risk-bar-wrap { margin: 0.75rem 0; }
+  .risk-bar-label { display: flex; justify-content: space-between;
+                    font-size: 0.82rem; margin-bottom: 0.3rem; }
+  .risk-bar { height: 8px; background: #e0e0e0; border-radius: 4px;
+              overflow: hidden; }
+  .risk-bar-fill { height: 100%; border-radius: 4px;
+                   transition: width 0.8s ease; }
+  .rec-item { border-left: 4px solid #ccc; padding: 0.75rem 1rem;
+              margin-bottom: 0.75rem; border-radius: 0 8px 8px 0;
+              background: #fafafa; }
+  .rec-item.URGENT { border-color: #e74c3c; background: #fdf5f5; }
+  .rec-item.HIGH   { border-color: #e67e22; background: #fdf8f5; }
+  .rec-item.MEDIUM { border-color: #f1c40f; background: #fdfcf0; }
+  .rec-item.LOW    { border-color: #27ae60; background: #f5fdf5; }
+  .rec-priority { font-size: 0.7rem; font-weight: 700;
+                  letter-spacing: 0.08em; margin-bottom: 0.3rem; }
+  .rec-action { font-size: 0.88rem; font-weight: 600; margin-bottom: 0.2rem; }
+  .rec-reason { font-size: 0.8rem; color: #666; }
+  .weather-grid { display: grid;
+                  grid-template-columns: repeat(auto-fit, minmax(130px,1fr));
+                  gap: 0.75rem; }
+  .weather-item { text-align: center; padding: 0.6rem;
+                  background: #f5fbf5; border-radius: 8px; }
+  .weather-item .wval { font-size: 1.2rem; font-weight: 700; color: #1a4a2e; }
+  .weather-item .wlab { font-size: 0.72rem; color: #888; margin-top: 0.2rem; }
+  .soil-grid { display: grid;
+               grid-template-columns: repeat(auto-fit, minmax(130px,1fr));
+               gap: 0.75rem; }
+  .soil-item { text-align: center; padding: 0.6rem;
+               background: #f5f0eb; border-radius: 8px; }
+  .soil-item .sval { font-size: 1.2rem; font-weight: 700; color: #6b3a1f; }
+  .soil-item .slab { font-size: 0.72rem; color: #888; margin-top: 0.2rem; }
+  .spinner { display: none; text-align: center; padding: 2rem; }
+  .spinner-ring { width: 40px; height: 40px; border: 4px solid #e8f4e8;
+                  border-top-color: #1a4a2e; border-radius: 50%;
+                  animation: spin 0.8s linear infinite; margin: 0 auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .top3-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+  .top3-pill { background: #e8f4e8; color: #1a4a2e;
+               padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.78rem; }
+  .top3-pill.top { background: #1a4a2e; color: white; }
+
+  /* Stage 3 yield */
+  .yield-grid { display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
+                gap: 1rem; margin-bottom: 1rem; }
+  .yield-card { background: #f0f7f0; border-radius: 10px;
+                padding: 1rem; text-align: center; border: 1.5px solid #c8e6c8; }
+  .yield-card .yval { font-size: 1.6rem; font-weight: 700; color: #1a4a2e; }
+  .yield-card .ylab { font-size: 0.72rem; color: #666;
+                      text-transform: uppercase; letter-spacing: 0.05em;
+                      margin-top: 0.3rem; }
+  .yield-card.loss  { background: #fdf5f5; border-color: #f5c6c6; }
+  .yield-card.loss .yval { color: #c0392b; }
+  .forecast-badge { display: inline-block; padding: 0.4rem 1.2rem;
+                    border-radius: 20px; font-weight: 700;
+                    font-size: 0.9rem; margin-bottom: 0.75rem; }
+  .forecast-Good     { background: #d5f5e3; color: #1e8449; }
+  .forecast-Moderate { background: #fef9e7; color: #b7950b; }
+  .forecast-Poor     { background: #fdebd0; color: #ca6f1e; }
+  .forecast-Critical { background: #fadbd8; color: #c0392b; }
+  .loss-reason { font-size: 0.85rem; color: #555; background: #f8f9fa;
+                 padding: 0.6rem 0.9rem; border-radius: 8px;
+                 margin-top: 0.75rem; border-left: 3px solid #1a4a2e; }
+  .econ-row { display: flex; justify-content: space-between;
+              padding: 0.5rem 0; border-bottom: 1px solid #eee;
+              font-size: 0.88rem; }
+  .econ-row:last-child { border-bottom: none; }
+  .econ-row .elab { color: #666; }
+  .econ-row .eval { font-weight: 600; color: #1a4a2e; }
+  .econ-row.loss-row .eval { color: #c0392b; }
+  .section-title { font-size: 0.88rem; font-weight: 600; color: #1a4a2e;
+                   margin: 1.2rem 0 0.6rem; padding-bottom: 0.3rem;
+                   border-bottom: 1px solid #e8f4e8; }
+
+  /* Stage 4 Digital Twin scenario cards */
+  .twin-summary-box { background: #eaf4ea; border-left: 4px solid #1a4a2e;
+                      border-radius: 0 10px 10px 0; padding: 0.9rem 1.1rem;
+                      font-size: 0.88rem; color: #1a2e1a;
+                      margin-bottom: 1.2rem; line-height: 1.6; }
+  .scenario-grid { display: grid;
+                   grid-template-columns: repeat(auto-fit, minmax(240px,1fr));
+                   gap: 1rem; margin-bottom: 1.2rem; }
+  .scenario-card { border-radius: 12px; padding: 1.1rem;
+                   border: 2px solid #e0e0e0; position: relative;
+                   transition: box-shadow 0.2s; }
+  .scenario-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.10); }
+  .scenario-card.best { border-color: #1a4a2e;
+                        box-shadow: 0 4px 16px rgba(26,74,46,0.15); }
+  .scenario-card.scen-A { background: #fdf5f5; border-color: #f5c6c6; }
+  .scenario-card.scen-B { background: #fef9e7; border-color: #f9e08a; }
+  .scenario-card.scen-C { background: #f0f7f0; border-color: #a8d5a8; }
+  .scenario-card.best.scen-C { border-color: #1a4a2e; }
+  .scenario-label { font-size: 0.72rem; font-weight: 700;
+                    letter-spacing: 0.08em; margin-bottom: 0.3rem; }
+  .scen-A .scenario-label { color: #c0392b; }
+  .scen-B .scenario-label { color: #b7950b; }
+  .scen-C .scenario-label { color: #1e8449; }
+  .scenario-name { font-size: 0.95rem; font-weight: 700;
+                   margin-bottom: 0.5rem; color: #1a2e1a; }
+  .scenario-desc { font-size: 0.78rem; color: #666;
+                   margin-bottom: 0.8rem; line-height: 1.5; }
+  .scenario-yield { font-size: 2rem; font-weight: 800;
+                    color: #1a4a2e; margin-bottom: 0.1rem; }
+  .scenario-yield-lab { font-size: 0.72rem; color: #888; margin-bottom: 0.6rem; }
+  .scenario-row { display: flex; justify-content: space-between;
+                  font-size: 0.8rem; padding: 0.25rem 0;
+                  border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .scenario-row:last-child { border-bottom: none; }
+  .scenario-row .sr-lab { color: #666; }
+  .scenario-row .sr-val { font-weight: 600; color: #1a2e1a; }
+  .scenario-row .sr-val.pos { color: #1e8449; }
+  .scenario-row .sr-val.neg { color: #c0392b; }
+  .best-badge { position: absolute; top: 0.7rem; right: 0.7rem;
+                background: #1a4a2e; color: white; font-size: 0.65rem;
+                font-weight: 700; padding: 0.2rem 0.55rem;
+                border-radius: 10px; letter-spacing: 0.05em; }
+  .vitality-bar-wrap { margin: 0.6rem 0 0.3rem; }
+  .vitality-bar { height: 6px; background: #e0e0e0;
+                  border-radius: 3px; overflow: hidden; }
+  .vitality-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+  .scen-A .vitality-fill { background: #e74c3c; }
+  .scen-B .vitality-fill { background: #f39c12; }
+  .scen-C .vitality-fill { background: #27ae60; }
+  .traj-table { width: 100%; border-collapse: collapse;
+                font-size: 0.82rem; margin-top: 0.5rem; }
+  .traj-table th { background: #1a4a2e; color: white;
+                   padding: 0.4rem 0.6rem; text-align: center;
+                   font-weight: 600; }
+  .traj-table td { padding: 0.4rem 0.6rem; text-align: center;
+                   border-bottom: 1px solid #eee; }
+  .traj-table tr:last-child td { border-bottom: none; }
+  .traj-table tr:nth-child(even) td { background: #f8fdf8; }
+
+  /* Stage 4 NEW: Farm Health Score (PennyLane) */
+  .stage4-section-title {
+    font-size: 0.82rem; font-weight: 700; color: #1a4a2e;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 0.4rem 0; border-bottom: 2px solid #e8f4e8;
+    margin: 1.2rem 0 0.9rem;
+  }
+  .health-panel {
+    display: flex; gap: 1.5rem; align-items: flex-start;
+    flex-wrap: wrap; margin-bottom: 1.5rem;
+  }
+  .health-gauge-wrap {
+    display: flex; flex-direction: column; align-items: center;
+    min-width: 140px;
+  }
+  .health-gauge { position: relative; width: 130px; height: 130px; }
+  .health-gauge svg { width: 130px; height: 130px; }
+  .gauge-bg  { fill: none; stroke: #e8f0e8; stroke-width: 14; }
+  .gauge-arc { fill: none; stroke-width: 14; stroke-linecap: round;
+               transition: stroke-dashoffset 1.2s ease;
+               transform: rotate(-90deg); transform-origin: 50% 50%; }
+  .gauge-text-wrap {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .gauge-score { font-size: 1.9rem; font-weight: 800; line-height: 1; }
+  .gauge-label { font-size: 0.68rem; color: #888; margin-top: 0.1rem; }
+  .health-status-label {
+    font-size: 0.88rem; font-weight: 700; margin-top: 0.6rem;
+    padding: 0.25rem 0.9rem; border-radius: 20px;
+  }
+  .health-status-label.green  { background: #d5f5e3; color: #1e8449; }
+  .health-status-label.orange { background: #fef9e7; color: #b7950b; }
+  .health-status-label.red    { background: #fadbd8; color: #c0392b; }
+  .health-dims { flex: 1; min-width: 200px; }
+  .health-dim-row { margin-bottom: 0.65rem; }
+  .health-dim-label { display: flex; justify-content: space-between;
+                      font-size: 0.8rem; margin-bottom: 0.25rem; }
+  .health-dim-name  { color: #444; }
+  .health-dim-score { font-weight: 700; }
+  .health-dim-score.green  { color: #1e8449; }
+  .health-dim-score.orange { color: #b7950b; }
+  .health-dim-score.red    { color: #c0392b; }
+  .health-dim-bar { height: 7px; background: #eee;
+                    border-radius: 4px; overflow: hidden; }
+  .health-dim-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+  .health-dim-fill.green  { background: #27ae60; }
+  .health-dim-fill.orange { background: #f39c12; }
+  .health-dim-fill.red    { background: #e74c3c; }
+  .health-advice {
+    font-size: 0.83rem; color: #555; background: #f8fdf8;
+    border-left: 3px solid #1a4a2e; padding: 0.55rem 0.85rem;
+    border-radius: 0 8px 8px 0; margin-top: 0.5rem;
+  }
+
+  /* Stage 4 NEW: Qiskit Recommendation */
+  .winner-card {
+    border: 2px solid #1a4a2e; border-radius: 14px;
+    padding: 1.2rem 1.4rem; background: #f5fbf5;
+    display: flex; gap: 1.2rem; flex-wrap: wrap;
+    align-items: flex-start; margin-bottom: 1rem;
+  }
+  .winner-left { min-width: 180px; }
+  .winner-action-label {
+    font-size: 0.72rem; font-weight: 700; color: #1a4a2e;
+    letter-spacing: 0.08em; margin-bottom: 0.3rem;
+  }
+  .winner-name { font-size: 1.25rem; font-weight: 800; color: #1a2e1a;
+                 margin-bottom: 0.5rem; line-height: 1.2; }
+  .winner-confidence { display: flex; align-items: center;
+                       gap: 0.5rem; margin-bottom: 0.6rem; }
+  .conf-bar-wrap { flex: 1; max-width: 160px; }
+  .conf-bar { height: 10px; background: #d0ebd0;
+              border-radius: 5px; overflow: hidden; }
+  .conf-bar-fill { height: 100%; background: #1a4a2e;
+                   border-radius: 5px; transition: width 1.2s ease; }
+  .conf-pct { font-size: 1.1rem; font-weight: 800;
+              color: #1a4a2e; white-space: nowrap; }
+  .conf-label { font-size: 0.72rem; color: #666; }
+  .urgency-badge { display: inline-block; padding: 0.3rem 0.9rem;
+                   border-radius: 20px; font-size: 0.8rem;
+                   font-weight: 700; margin-bottom: 0.6rem; }
+  .urgency-badge.red    { background: #fadbd8; color: #c0392b; }
+  .urgency-badge.orange { background: #fef9e7; color: #b7950b; }
+  .urgency-badge.green  { background: #d5f5e3; color: #1e8449; }
+  .winner-stats { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.3rem; }
+  .wstat { background: white; border: 1px solid #c8e6c8;
+           border-radius: 8px; padding: 0.4rem 0.7rem;
+           text-align: center; min-width: 90px; }
+  .wstat .wv { font-size: 1rem; font-weight: 700; color: #1a4a2e; }
+  .wstat .wl { font-size: 0.68rem; color: #888; margin-top: 0.1rem; }
+  .winner-right { flex: 1; min-width: 200px; }
+  .instr-title { font-size: 0.78rem; font-weight: 700; color: #1a4a2e;
+                 letter-spacing: 0.06em; margin-bottom: 0.5rem; }
+  .instr-row { display: flex; gap: 0.5rem; margin-bottom: 0.4rem;
+               font-size: 0.82rem; }
+  .instr-icon { font-size: 0.9rem; flex-shrink: 0; }
+  .instr-text { color: #333; line-height: 1.4; }
+  .instr-text strong { color: #1a2e1a; }
+  .options-chart { margin-top: 0.5rem; }
+  .options-chart-title { font-size: 0.8rem; font-weight: 600;
+                         color: #555; margin-bottom: 0.5rem; }
+  .option-row { margin-bottom: 0.45rem; }
+  .option-row-label { display: flex; justify-content: space-between;
+                      font-size: 0.75rem; margin-bottom: 0.2rem; }
+  .option-name { color: #555; }
+  .option-pct  { font-weight: 600; color: #1a4a2e; }
+  .option-bar  { height: 6px; background: #eee;
+                 border-radius: 3px; overflow: hidden; }
+  .option-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+  .winner-fill { background: #1a4a2e; }
+  .other-fill  { background: #a8d5a8; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Rice Disease Advisory System</h1>
+    <span>Hybrid Quantum AI · Stage 1 QCNN · Stage 2 QAOA ·
+          Stage 3 VQE · Stage 4 Digital Twin</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Location -->
+  <div class="card">
+    <h2>Farm Location</h2>
+    <div class="location-row">
+      <input type="text" id="location-search"
+             placeholder="Enter your village, district or city (e.g. Warangal, Telangana)"/>
+      <button class="btn btn-primary" onclick="geocodeLocation()">Find</button>
+      <button class="btn btn-secondary" onclick="useGPS()">GPS</button>
+    </div>
+    <div class="location-display" id="location-display">
+      No location set — enter above or use GPS
+    </div>
+    <input type="hidden" id="lat"/>
+    <input type="hidden" id="lon"/>
+  </div>
+
+  <!-- Upload -->
+  <div class="card">
+    <h2>Upload Rice Leaf Image</h2>
+    <div class="upload-area"
+         onclick="document.getElementById('imageInput').click()">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+           stroke="#1a4a2e" stroke-width="1.5">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p>Click to upload or drag and drop<br/>
+         <small>JPG, PNG — rice leaf photo</small></p>
+      <img id="preview" alt="Preview"/>
+    </div>
+    <input type="file" id="imageInput" accept="image/*"
+           style="display:none" onchange="previewImage(this)"/>
+  </div>
+
+  <button class="submit-btn" onclick="analyze()" id="submitBtn">
+    Analyze Crop
+  </button>
+
+  <!-- Spinner -->
+  <div class="spinner" id="spinner">
+    <div class="spinner-ring"></div>
+    <p style="margin-top:1rem;color:#666;font-size:0.9rem">
+      Running quantum analysis — Stage 1 · Stage 2 · Stage 3 · Stage 4...
+    </p>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+
+    <!-- Stage 1 -->
+    <div class="card">
+      <h2>Disease Detection (Stage 1 — Hybrid QCNN)</h2>
+      <div class="results-grid">
+        <div class="metric-card">
+          <div class="label">Disease</div>
+          <div class="value" id="r-disease" style="font-size:1.1rem">—</div>
+          <div class="sub" id="r-confidence">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Severity</div>
+          <div class="value" id="r-severity">—</div>
+          <div class="sub" id="r-category">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Overall risk</div>
+          <div class="value" id="r-risk">—</div>
+          <div class="sub" id="r-risklevel">—</div>
+        </div>
+      </div>
+      <div class="top3-row" id="r-top3"></div>
+    </div>
+
+    <!-- Stage 2 QAOA -->
+    <div class="card">
+      <h2>QAOA Risk Scores (Stage 2)</h2>
+      <div id="risk-bars"></div>
+    </div>
+
+    <!-- Stage 3 VQE -->
+    <div class="card">
+      <h2>Yield Prediction (Stage 3 — VQE)</h2>
+      <div id="r-forecast-badge"></div>
+      <div class="yield-grid">
+        <div class="yield-card">
+          <div class="yval" id="y-baseline">—</div>
+          <div class="ylab">Baseline yield</div>
+        </div>
+        <div class="yield-card">
+          <div class="yval" id="y-predicted">—</div>
+          <div class="ylab">Predicted yield</div>
+        </div>
+        <div class="yield-card loss">
+          <div class="yval" id="y-loss-tha">—</div>
+          <div class="ylab">Yield loss (t/ha)</div>
+        </div>
+        <div class="yield-card loss">
+          <div class="yval" id="y-loss-pct">—</div>
+          <div class="ylab">Total loss %</div>
+        </div>
+      </div>
+      <div class="loss-reason" id="y-reason"></div>
+      <div class="section-title">Economic Impact (per hectare)</div>
+      <div class="econ-row">
+        <span class="elab">MSP rate 2024-25</span>
+        <span class="eval" id="y-msp">—</span>
+      </div>
+      <div class="econ-row">
+        <span class="elab">Potential revenue</span>
+        <span class="eval" id="y-potential">—</span>
+      </div>
+      <div class="econ-row">
+        <span class="elab">Expected revenue</span>
+        <span class="eval" id="y-expected">—</span>
+      </div>
+      <div class="econ-row loss-row">
+        <span class="elab">Economic loss</span>
+        <span class="eval" id="y-econloss">—</span>
+      </div>
+      <div class="section-title">Loss Breakdown</div>
+      <div class="risk-bar-wrap">
+        <div class="risk-bar-label">
+          <span>Disease penalty</span>
+          <span id="y-dis-pct">—</span>
+        </div>
+        <div class="risk-bar">
+          <div class="risk-bar-fill" id="y-dis-bar"
+               style="background:#e74c3c;width:0%"></div>
+        </div>
+      </div>
+      <div class="risk-bar-wrap">
+        <div class="risk-bar-label">
+          <span>Environmental penalty</span>
+          <span id="y-env-pct">—</span>
+        </div>
+        <div class="risk-bar">
+          <div class="risk-bar-fill" id="y-env-bar"
+               style="background:#e67e22;width:0%"></div>
+        </div>
+      </div>
+      <p style="font-size:0.75rem;color:#aaa;margin-top:0.75rem">
+        VQE energy: <span id="y-vqe">—</span> ·
+        Baseline: 4.5 t/ha (ICAR India avg) ·
+        MSP ₹23,100/tonne (2024-25)
+      </p>
+    </div>
+
+    <!-- Stage 4 — Farm Intelligence -->
+    <div class="card">
+      <h2>Farm Intelligence (Stage 4 — Quantum AI)</h2>
+
+      <!-- PennyLane: Farm Health Score -->
+      <div class="stage4-section-title">🌾 Farm Health Score — PennyLane Quantum Sensor</div>
+      <div class="health-panel">
+
+        <div class="health-gauge-wrap">
+          <div class="health-gauge">
+            <svg viewBox="0 0 130 130">
+              <circle class="gauge-bg" cx="65" cy="65" r="52"/>
+              <circle class="gauge-arc" id="dt-gauge-arc"
+                      cx="65" cy="65" r="52"
+                      stroke="#27ae60"
+                      stroke-dasharray="326.7"
+                      stroke-dashoffset="326.7"/>
+            </svg>
+            <div class="gauge-text-wrap">
+              <div class="gauge-score" id="dt-health-score">—</div>
+              <div class="gauge-label">/ 100</div>
+            </div>
+          </div>
+          <div class="health-status-label green" id="dt-health-label">—</div>
+        </div>
+
+        <div class="health-dims">
+          <div id="dt-health-dims"></div>
+          <div class="health-advice" id="dt-health-advice"></div>
+        </div>
+
+      </div>
+
+      <!-- Qiskit: Single Recommendation -->
+      <div class="stage4-section-title">💊 Quantum Recommendation — Qiskit Grover Search</div>
+
+      <div class="winner-card">
+        <div class="winner-left">
+          <div class="winner-action-label">RECOMMENDED ACTION</div>
+          <div class="winner-name" id="dt-winner-name">—</div>
+
+          <div class="winner-confidence">
+            <div class="conf-bar-wrap">
+              <div class="conf-label">Quantum Confidence</div>
+              <div class="conf-bar">
+                <div class="conf-bar-fill" id="dt-conf-bar" style="width:0%"></div>
+              </div>
+            </div>
+            <div class="conf-pct" id="dt-conf-pct">—</div>
+          </div>
+
+          <div class="urgency-badge green" id="dt-urgency">—</div>
+
+          <div class="winner-stats">
+            <div class="wstat">
+              <div class="wv" id="dt-cost">—</div>
+              <div class="wl">Cost / ha</div>
+            </div>
+            <div class="wstat">
+              <div class="wv" id="dt-gain">—</div>
+              <div class="wl">Revenue gain</div>
+            </div>
+            <div class="wstat">
+              <div class="wv" id="dt-recovered">—</div>
+              <div class="wl">Yield saved</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="winner-right">
+          <div class="instr-title">HOW TO APPLY</div>
+          <div class="instr-row">
+            <span class="instr-icon">🧪</span>
+            <span class="instr-text">
+              <strong>Product:</strong>
+              <span id="dt-instr-product">—</span>
+            </span>
+          </div>
+          <div class="instr-row">
+            <span class="instr-icon">⚖️</span>
+            <span class="instr-text">
+              <strong>Dose:</strong>
+              <span id="dt-instr-dose">—</span>
+            </span>
+          </div>
+          <div class="instr-row">
+            <span class="instr-icon">🌿</span>
+            <span class="instr-text">
+              <strong>Method:</strong>
+              <span id="dt-instr-method">—</span>
+            </span>
+          </div>
+          <div class="instr-row">
+            <span class="instr-icon">📅</span>
+            <span class="instr-text">
+              <strong>Timing:</strong>
+              <span id="dt-instr-when">—</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Options confidence bar chart -->
+      <div class="options-chart">
+        <div class="options-chart-title">
+          All interventions — quantum confidence ranking
+        </div>
+        <div id="dt-options-chart"></div>
+      </div>
+
+      <!-- Digital Twin -->
+      <div class="stage4-section-title">🔬 Digital Twin Simulation — 30-Day Forecast</div>
+      <div class="twin-summary-box" id="dt-summary">—</div>
+      <div class="scenario-grid" id="dt-scenarios"></div>
+
+      <div class="section-title">30-Day Crop Vitality Trajectory (% vitality)</div>
+      <div style="overflow-x:auto">
+        <table class="traj-table">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>🔴 No Treatment</th>
+              <th>🟡 Delayed</th>
+              <th>🟢 Optimal</th>
+            </tr>
+          </thead>
+          <tbody id="dt-traj-body"></tbody>
+        </table>
+      </div>
+
+      <p style="font-size:0.75rem;color:#aaa;margin-top:0.75rem">
+        5-qubit PennyLane health circuit · Qiskit Grover search (1024 shots) ·
+        Digital Twin over <span id="dt-days">30</span> days ·
+        Treatment costs: A=₹0 · B=₹4,500/ha · C=₹9,000/ha
+      </p>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="card">
+      <h2>Recommendations</h2>
+      <div id="r-recs"></div>
+    </div>
+
+    <!-- Weather -->
+    <div class="card">
+      <h2>Weather at Your Location</h2>
+      <div class="weather-grid" id="r-weather"></div>
+    </div>
+
+    <!-- Soil -->
+    <div class="card">
+      <h2>Soil Conditions at Your Location</h2>
+      <div class="soil-grid" id="r-soil"></div>
+    </div>
+
+  </div><!-- /results -->
+</div>
+
+<script>
+let selectedFile = null;
+
+function previewImage(input) {
+  if (!input.files[0]) return;
+  selectedFile = input.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('preview');
+    img.src = e.target.result;
+    img.style.display = 'block';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+async function geocodeLocation() {
+  const q = document.getElementById('location-search').value.trim();
+  if (!q) return;
+  try {
+    const res  = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`
+    );
+    const data = await res.json();
+    if (data.length > 0) {
+      setLocation(parseFloat(data[0].lat), parseFloat(data[0].lon),
+                  data[0].display_name);
+    } else {
+      document.getElementById('location-display').textContent =
+        'Location not found — try a nearby city name';
+    }
+  } catch(e) {
+    alert('Geocoding failed: ' + e.message);
+  }
+}
+
+function useGPS() {
+  if (!navigator.geolocation) { alert('GPS not available'); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => setLocation(pos.coords.latitude, pos.coords.longitude,
+                       'Current GPS location'),
+    err => alert('GPS error: ' + err.message)
+  );
+}
+
+function setLocation(lat, lon, label) {
+  document.getElementById('lat').value = lat;
+  document.getElementById('lon').value = lon;
+  document.getElementById('location-display').textContent =
+    `Location set: ${label} (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+}
+
+async function analyze() {
+  const lat = document.getElementById('lat').value;
+  const lon = document.getElementById('lon').value;
+  if (!lat || !lon) { alert('Please set your farm location first'); return; }
+  if (!selectedFile) { alert('Please upload a rice leaf image'); return; }
+
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('spinner').style.display = 'block';
+  document.getElementById('results').style.display = 'none';
+
+  const fd = new FormData();
+  fd.append('lat',   lat);
+  fd.append('lon',   lon);
+  fd.append('image', selectedFile);
+
+  try {
+    const res  = await fetch('/analyze', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.error) { alert('Error: ' + data.error); return; }
+    renderResults(data);
+  } catch(e) {
+    alert('Request failed: ' + e.message);
+  } finally {
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('spinner').style.display = 'none';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER RESULTS
+   ═══════════════════════════════════════════════════════════════ */
+function renderResults(d) {
+  const s1  = d.stage1;
+  const rk  = d.risk;
+  const y   = d.yield;
+  const sim = d.simulation;
+
+  // ── Stage 1 ──────────────────────────────────────────────────
+  document.getElementById('r-disease').textContent    = s1.disease_label;
+  document.getElementById('r-confidence').textContent = `Confidence: ${s1.confidence}%`;
+  document.getElementById('r-severity').textContent   = s1.severity_label;
+  document.getElementById('r-category').textContent   = s1.category_label;
+  document.getElementById('r-risk').textContent       = `${(rk.overall_risk*100).toFixed(0)}%`;
+  document.getElementById('r-risklevel').textContent  = rk.risk_level;
+
+  document.getElementById('r-top3').innerHTML =
+    s1.top3.map((t, i) =>
+      `<span class="top3-pill ${i===0?'top':''}">${t.disease} ${t.confidence}%</span>`
+    ).join('');
+
+  // ── Stage 2 QAOA risk bars ───────────────────────────────────
+  const bars = [
+    {label:'Blast risk',    val:rk.blast_risk,   color:'#e74c3c'},
+    {label:'Weather risk',  val:rk.blight_risk,  color:'#e67e22'},  // renamed from Blight risk
+    {label:'Soil stress',   val:rk.soil_stress,  color:'#8b4513'},
+    {label:'Overall risk',  val:rk.overall_risk, color:'#1a4a2e'},
+  ];
+  document.getElementById('risk-bars').innerHTML = bars.map(b => `
+    <div class="risk-bar-wrap">
+      <div class="risk-bar-label">
+        <span>${b.label}</span>
+        <span>${(b.val*100).toFixed(1)}%</span>
+      </div>
+      <div class="risk-bar">
+        <div class="risk-bar-fill"
+             style="width:${b.val*100}%;background:${b.color}"></div>
+      </div>
+    </div>`).join('');
+
+  // ── Stage 3 VQE yield ────────────────────────────────────────
+  const fc = y.seasonal_forecast;
+  document.getElementById('r-forecast-badge').innerHTML =
+    `<span class="forecast-badge forecast-${fc}">${fc} Harvest Forecast</span>`;
+  document.getElementById('y-baseline').textContent  = y.baseline_yield_t_ha + ' t/ha';
+  document.getElementById('y-predicted').textContent = y.predicted_yield_t_ha + ' t/ha';
+  document.getElementById('y-loss-tha').textContent  = y.yield_loss_t_ha + ' t/ha';
+  document.getElementById('y-loss-pct').textContent  = y.yield_loss_pct + '%';
+  document.getElementById('y-reason').textContent    = y.loss_reason;
+  document.getElementById('y-msp').textContent =
+    '₹' + y.msp_per_tonne_inr.toLocaleString('en-IN') + '/tonne';
+  document.getElementById('y-potential').textContent =
+    '₹' + y.potential_revenue_inr.toLocaleString('en-IN');
+  document.getElementById('y-expected').textContent =
+    '₹' + y.expected_revenue_inr.toLocaleString('en-IN');
+  document.getElementById('y-econloss').textContent =
+    '₹' + y.economic_loss_inr.toLocaleString('en-IN');
+  document.getElementById('y-dis-pct').textContent = y.disease_penalty_pct + '%';
+  document.getElementById('y-dis-bar').style.width  = y.disease_penalty_pct + '%';
+  document.getElementById('y-env-pct').textContent = y.env_penalty_pct + '%';
+  document.getElementById('y-env-bar').style.width  = y.env_penalty_pct + '%';
+  document.getElementById('y-vqe').textContent = y.vqe_energy;
+
+  // ── Stage 4 ──────────────────────────────────────────────────
+  if (sim) renderStage4(sim);
+
+  // ── Recommendations ──────────────────────────────────────────
+  document.getElementById('r-recs').innerHTML =
+    d.recommendations.recommendations.map(r => `
+      <div class="rec-item ${r.priority}">
+        <div class="rec-priority" style="color:${
+          r.priority==='URGENT'?'#e74c3c':
+          r.priority==='HIGH'  ?'#e67e22':
+          r.priority==='MEDIUM'?'#c9a800':'#27ae60'}"
+        >${r.priority}</div>
+        <div class="rec-action">${r.action}</div>
+        <div class="rec-reason">${r.reason}</div>
+      </div>`).join('') ||
+    '<p style="color:#888;font-size:0.9rem">No recommendations generated.</p>';
+
+  // ── Weather ──────────────────────────────────────────────────
+  const w = d.weather;
+  document.getElementById('r-weather').innerHTML = [
+    {v: w.temperature+'°C',    l:'Temperature'},
+    {v: w.humidity+'%',        l:'Humidity'},
+    {v: w.rainfall_mm+'mm',    l:'Rainfall (1h)'},
+    {v: w.wind_speed+'m/s',    l:'Wind speed'},
+    {v: w.description,         l:'Condition'},
+    {v: w.city+', '+w.country, l:'Location'},
+  ].map(i=>`
+    <div class="weather-item">
+      <div class="wval">${i.v}</div>
+      <div class="wlab">${i.l}</div>
+    </div>`).join('');
+
+  // ── Soil ─────────────────────────────────────────────────────
+  const s = d.soil;
+  document.getElementById('r-soil').innerHTML = [
+    {v: s.ph,                    l:'Soil pH'},
+    {v: s.nitrogen_g_kg+'g/kg',  l:'Nitrogen'},
+    {v: s.clay_percent+'%',      l:'Clay %'},
+    {v: s.organic_carbon+'g/kg', l:'Organic carbon'},
+    {v: s.bulk_density+'g/cm³',  l:'Bulk density'},
+  ].map(i=>`
+    <div class="soil-item">
+      <div class="sval">${i.v}</div>
+      <div class="slab">${i.l}</div>
+    </div>`).join('');
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({behavior:'smooth'});
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STAGE 4 RENDERER
+   ═══════════════════════════════════════════════════════════════ */
+function renderStage4(sim) {
+
+  // ── PennyLane: Farm Health Score ─────────────────────────────
+  const fh = sim.farm_health;
+  if (fh) {
+    const score = fh.overall_score;
+    const color = fh.color;  // "green" | "orange" | "red"
+
+    // Animate gauge arc
+    // Full circle circumference = 2π × 52 ≈ 326.7
+    const circ   = 326.7;
+    const offset = circ - (score / 100) * circ;
+    const arcEl  = document.getElementById('dt-gauge-arc');
+    setTimeout(() => { arcEl.style.strokeDashoffset = offset; }, 100);
+    arcEl.style.stroke = (
+      color === 'green'  ? '#27ae60' :
+      color === 'orange' ? '#f39c12' : '#e74c3c'
+    );
+
+    const scoreEl = document.getElementById('dt-health-score');
+    scoreEl.textContent = score;
+    scoreEl.style.color = (
+      color === 'green'  ? '#1e8449' :
+      color === 'orange' ? '#b7950b' : '#c0392b'
+    );
+
+    const labelEl      = document.getElementById('dt-health-label');
+    labelEl.textContent = fh.label;
+    labelEl.className   = 'health-status-label ' + color;
+
+    document.getElementById('dt-health-advice').textContent = fh.advice;
+
+    document.getElementById('dt-health-dims').innerHTML =
+      (fh.dimensions || []).map(dim => `
+        <div class="health-dim-row">
+          <div class="health-dim-label">
+            <span class="health-dim-name">${dim.name}</span>
+            <span class="health-dim-score ${dim.color}">${dim.score}</span>
+          </div>
+          <div class="health-dim-bar">
+            <div class="health-dim-fill ${dim.color}"
+                 style="width:${dim.score}%"></div>
+          </div>
+        </div>`).join('');
+  }
+
+  // ── Qiskit: Single Recommendation ────────────────────────────
+  const rec = sim.recommendation;
+  if (rec) {
+    const w = rec.winner || {};
+
+    document.getElementById('dt-winner-name').textContent = w.label || '—';
+    document.getElementById('dt-conf-pct').textContent    = (w.confidence_pct || 0) + '%';
+    setTimeout(() => {
+      document.getElementById('dt-conf-bar').style.width = (w.confidence_pct || 0) + '%';
+    }, 150);
+
+    const urgEl     = document.getElementById('dt-urgency');
+    urgEl.textContent = '⏰ ' + (w.urgency_label || '—');
+    urgEl.className   = 'urgency-badge ' + (w.urgency_color || 'green');
+
+    document.getElementById('dt-cost').textContent =
+      '₹' + (w.cost_inr || 0).toLocaleString('en-IN');
+    document.getElementById('dt-gain').textContent =
+      '₹' + (w.revenue_gain_inr || 0).toLocaleString('en-IN');
+    document.getElementById('dt-recovered').textContent =
+      (w.recovered_yield_t_ha || 0) + ' t/ha';
+
+    const ins = w.instructions || {};
+    document.getElementById('dt-instr-product').textContent = ins.product || '—';
+    document.getElementById('dt-instr-dose').textContent    = ins.dose    || '—';
+    document.getElementById('dt-instr-method').textContent  = ins.method  || '—';
+    document.getElementById('dt-instr-when').textContent    = ins.when    || '—';
+
+    // Confidence bar chart — top 5 options
+    const opts    = (rec.all_options || []).slice(0, 5);
+    const maxConf = opts.length ? Math.max(...opts.map(o => o.confidence_pct), 1) : 1;
+    document.getElementById('dt-options-chart').innerHTML =
+      opts.map((o, i) => `
+        <div class="option-row">
+          <div class="option-row-label">
+            <span class="option-name">${o.label}</span>
+            <span class="option-pct">${o.confidence_pct}%</span>
+          </div>
+          <div class="option-bar">
+            <div class="option-fill ${i===0 ? 'winner-fill' : 'other-fill'}"
+                 style="width:${(o.confidence_pct / maxConf) * 100}%"></div>
+          </div>
+        </div>`).join('');
+  }
+
+  // ── Digital Twin: Summary + Scenarios + Trajectory ───────────
+  document.getElementById('dt-summary').textContent = sim.twin_summary || '—';
+
+  const scenColors = {A:'scen-A', B:'scen-B', C:'scen-C'};
+  document.getElementById('dt-scenarios').innerHTML =
+    (sim.scenarios || []).map(s => {
+      const isBest   = s.label === sim.best_scenario_label;
+      const gainText = s.label === 'A'
+        ? '—' : `+${s.yield_gain_vs_no_treat_t_ha} t/ha`;
+      return `
+      <div class="scenario-card ${scenColors[s.label]} ${isBest ? 'best' : ''}">
+        ${isBest ? '<span class="best-badge">BEST</span>' : ''}
+        <div class="scenario-label">${s.label}</div>
+        <div class="scenario-name">${s.name}</div>
+        <div class="scenario-desc">${s.description}</div>
+        <div class="scenario-yield">${s.predicted_yield_t_ha}</div>
+        <div class="scenario-yield-lab">t/ha predicted yield</div>
+        <div class="vitality-bar-wrap">
+          <div class="vitality-bar">
+            <div class="vitality-fill" style="width:${s.vitality_pct}%"></div>
+          </div>
+        </div>
+        <div class="scenario-row">
+          <span class="sr-lab">Vitality</span>
+          <span class="sr-val">${s.vitality_pct}%</span>
+        </div>
+        <div class="scenario-row">
+          <span class="sr-lab">Expected revenue</span>
+          <span class="sr-val">₹${(s.expected_revenue_inr||0).toLocaleString('en-IN')}</span>
+        </div>
+        <div class="scenario-row">
+          <span class="sr-lab">Treatment cost</span>
+          <span class="sr-val">₹${(s.treatment_cost_inr||0).toLocaleString('en-IN')}</span>
+        </div>
+        <div class="scenario-row">
+          <span class="sr-lab">Economic loss</span>
+          <span class="sr-val neg">₹${(s.economic_loss_inr||0).toLocaleString('en-IN')}</span>
+        </div>
+        <div class="scenario-row">
+          <span class="sr-lab">Yield gain vs no-treat</span>
+          <span class="sr-val ${s.label!=='A' ? 'pos' : ''}">${gainText}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+  // Trajectory table
+  const traj = sim.trajectory || {};
+  const days = [7, 14, 21, 30];
+  document.getElementById('dt-traj-body').innerHTML =
+    days.map((day, i) => {
+      const a = (traj.A || [])[i] || {};
+      const b = (traj.B || [])[i] || {};
+      const c = (traj.C || [])[i] || {};
+      return `<tr>
+        <td><strong>Day ${day}</strong></td>
+        <td style="color:#c0392b">${a.vitality_pct||0}%
+          <br/><small>${a.yield_t_ha||0} t/ha</small></td>
+        <td style="color:#b7950b">${b.vitality_pct||0}%
+          <br/><small>${b.yield_t_ha||0} t/ha</small></td>
+        <td style="color:#1e8449">${c.vitality_pct||0}%
+          <br/><small>${c.yield_t_ha||0} t/ha</small></td>
+      </tr>`;
+    }).join('');
+
+  document.getElementById('dt-days').textContent = sim.days_simulated || 30;
+}
+</script>
+</body>
+</html>
