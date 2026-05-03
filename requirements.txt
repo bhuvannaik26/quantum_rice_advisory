@@ -9,5 +9,5 @@ gunicorn
 Pillow
 numpy
 scipy
-qiskit==1.2.4
-qiskit-aer==0.15.1
+qiskit==0.45.3
+qiskit-aer==0.13.3
